@@ -1,8 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useUpload } from "../hooks/useUpload";
 import { useMeetingProgress } from "../hooks/useMeetingProgress";
 import { Upload as UploadIcon, FileAudio, CheckCircle, AlertTriangle, X, Play, Loader } from "lucide-react";
 import { MeetingProgress } from "../components/MeetingProgress";
+import meetingService from "../services/meeting.service";
+import MeetingStorage from "../utils/MeetingStorage";
+import logger from "../utils/logger";
 
 const FORMAT_LABELS = ["MP3", "WAV", "OGG", "FLAC", "MP4 Audio"];
 
@@ -105,12 +108,12 @@ const Upload = () => {
   const handleUpload = useCallback(async () => {
     try {
       const result = await upload();
-      const meetingId = result?.name || "meeting-session-1";
-      setUploadedMeetingId(meetingId);
+      const newMeeting = MeetingStorage.addUploadedMeeting(file?.name || "Nouvel Enregistrement");
+      setUploadedMeetingId(newMeeting.id);
       
       // Déclenchement automatique du pipeline de transcription & analyse NLP
       try {
-        await meetingService.startTranscription(meetingId);
+        await meetingService.startTranscription(newMeeting.id);
       } catch (e) {
         logger.warn("[Upload] Démarrage transcription automatique:", e.message);
       }

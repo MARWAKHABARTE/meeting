@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
 import meetingService from "../services/meeting.service";
+import MeetingStorage from "../utils/MeetingStorage";
 import logger from "../utils/logger";
 
 /**
  * Hook encapsulant la logique de chargement et traitement des réunions.
- * Aucun appel HTTP direct dans les composants.
+ * Aucune logique métier ici — uniquement la communication HTTP.
  */
 export const useMeetings = () => {
   const [meetings, setMeetings] = useState([]);
@@ -15,8 +16,8 @@ export const useMeetings = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await meetingService.getMeetings();
-      setMeetings(Array.isArray(data) ? data : []);
+      const stored = MeetingStorage.getMeetings();
+      setMeetings(stored);
     } catch (err) {
       logger.error("[useMeetings] fetchMeetings:", err.message);
       setError(err.message || "Erreur lors du chargement des réunions.");

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import meetingService from "../services/meeting.service";
+import MeetingStorage from "../utils/MeetingStorage";
 import { FileText, Search, Copy, CheckCheck, ChevronLeft, User, Clock } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { Skeleton } from "../components/Skeleton";
@@ -65,6 +66,7 @@ const Transcript = () => {
   const effectiveId = id || "meeting-session-1";
 
   const [transcript, setTranscript] = useState(null);
+  const [meetingData, setMeetingData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
@@ -74,8 +76,14 @@ const Transcript = () => {
   useEffect(() => {
     const loadTranscript = async () => {
       try {
-        await new Promise((r) => setTimeout(r, 300));
-        setTranscript(DEMO_TRANSCRIPT);
+        await new Promise((r) => setTimeout(r, 200));
+        const meeting = MeetingStorage.getMeetingById(effectiveId);
+        setMeetingData(meeting);
+        setTranscript({
+          full_text: meeting.segments?.map((s) => s.text).join(" ") || DEMO_TRANSCRIPT.full_text,
+          segments: meeting.segments || DEMO_TRANSCRIPT.segments,
+          speakers: meeting.speakers || DEMO_TRANSCRIPT.speakers,
+        });
       } catch (err) {
         logger.error("[Transcript] Erreur chargement:", err.message);
         setError("Impossible de charger la transcription.");

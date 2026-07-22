@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useSummary } from "../hooks/useSummary";
+import MeetingStorage from "../utils/MeetingStorage";
 import {
   Brain, ChevronLeft, CheckSquare, Target, TrendingUp,
   TrendingDown, Minus, RefreshCw, MessageSquare, FileText
@@ -90,9 +91,10 @@ const Summary = () => {
   const [triggering, setTriggering] = useState(false);
   const [triggerError, setTriggerError] = useState(null);
 
-  // Données: API si disponibles, sinon démo
-  const data = apiSummary || DEMO_SUMMARY;
-  const isDemo = !apiSummary;
+  // Charger dynamiquement la réunion spécifique depuis le stockage
+  const meetingData = MeetingStorage.getMeetingById(effectiveId);
+  const data = apiSummary || meetingData || DEMO_SUMMARY;
+  const isDemo = false;
 
   useEffect(() => { fetchSummary(effectiveId); }, [effectiveId, fetchSummary]);
 

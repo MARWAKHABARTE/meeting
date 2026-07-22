@@ -1,15 +1,10 @@
 import React, { useEffect } from "react";
 import { useReport } from "../hooks/useReport";
+import MeetingStorage from "../utils/MeetingStorage";
 import { FileText, Download, BarChart2, Calendar, FileType } from "lucide-react";
 import { Skeleton } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
-
-const DEMO_REPORTS = [
-  { id: "rep-1", title: "Rapport Synthèse Executif — Sprint 10", meeting_id: "meeting-session-1", type: "PDF", created_at: new Date().toISOString() },
-  { id: "rep-2", title: "Compte Rendu & Actions — Lancement Project", meeting_id: "meeting-session-2", type: "TXT", created_at: new Date().toISOString() },
-  { id: "rep-3", title: "Analyse Sémantique & NLP — Comité Technique", meeting_id: "meeting-session-3", type: "PDF", created_at: new Date().toISOString() },
-];
 
 export const Reports = () => {
   const { reports: apiReports, loading, error, fetchReports, downloadReport } = useReport();
@@ -18,7 +13,15 @@ export const Reports = () => {
     fetchReports();
   }, [fetchReports]);
 
-  const reports = (apiReports && apiReports.length > 0) ? apiReports : DEMO_REPORTS;
+  // Générer dynamiquement la liste des rapports basés sur les réunions existantes
+  const allMeetings = MeetingStorage.getMeetings();
+  const reports = allMeetings.map((m, idx) => ({
+    id: `rep-${m.id}`,
+    title: `Rapport Synthèse Executif — ${m.title || m.name}`,
+    meeting_id: m.id,
+    type: idx % 2 === 0 ? "PDF" : "TXT",
+    created_at: m.date || new Date().toISOString(),
+  }));
 
   return (
     <div className="page">
