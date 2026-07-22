@@ -1,31 +1,31 @@
-/* Thème & Couleurs Globales */
+/* Thème & Couleurs Globales (Enterprise SaaS Palette) */
 :root {
-  --bg-primary: #0a0a0c;
-  --bg-secondary: #121216;
-  --bg-tertiary: #1a1a22;
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --bg-primary: #0b0f19;
+  --bg-secondary: #141c2e;
+  --bg-tertiary: #1e293e;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
   
-  --accent-color: #6366f1; /* Indigo */
-  --accent-hover: #4f46e5;
-  --accent-light: rgba(99, 102, 241, 0.15);
+  --accent-color: #3b82f6; /* Blue vibrant */
+  --accent-hover: #2563eb;
+  --accent-light: rgba(59, 130, 246, 0.15);
   
-  --success-color: #10b981; /* Émeraude */
+  --success-color: #10b981; /* Emeraude */
   --success-light: rgba(16, 185, 129, 0.15);
   
-  --warning-color: #f59e0b; /* Ambre */
+  --warning-color: #f59e0b; /* Amber */
   --warning-light: rgba(245, 158, 11, 0.15);
   
-  --danger-color: #ef4444; /* Rouge */
+  --danger-color: #ef4444; /* Red */
   --danger-light: rgba(239, 68, 68, 0.15);
   
-  --border-color: #2e2e38;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --transition-speed: 0.25s;
+  --transition-speed: 0.2s;
 }
 
 /* Reset & Style Global */
