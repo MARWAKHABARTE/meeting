@@ -13,7 +13,9 @@ services:
       POSTGRES_SERVER: postgres
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio:9000
-      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_SERVER_URL: http://keycloak:8080/keycloak
+      KEYCLOAK_REALM: meeting-ai
+      KEYCLOAK_CLIENT_ID: meeting-ai-backend
       OLLAMA_HOST: http://ollama:11434
     command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
