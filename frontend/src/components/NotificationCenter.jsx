@@ -1,43 +1,58 @@
 import React, { useEffect, useState } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
-import logger from "../utils/logger";
+import { Bell, CheckCircle2, AlertTriangle, FileText, X } from "lucide-react";
 
 /**
- * Centre de notifications flottant (Toasts).
- * Reçoit directement les messages WebSocket de type NOTIFICATION ou ERROR
- * et les affiche sous forme de cartes élégantes temporaires.
+ * Centre de notifications SaaS pour événements métier.
+ * Transforme les notifications système en messages clairs pour l'utilisateur.
  */
 export const NotificationCenter = () => {
   const { subscribe } = useWebSocket();
   const [toasts, setToasts] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // Écoute de tous les événements de type NOTIFICATION ou ERROR
     const handleEvent = (eventData) => {
       const { event, payload } = eventData;
-      if (event === "NOTIFICATION" || event === "ERROR") {
-        const message = payload.message || payload.details || "Événement reçu";
-        const title = event === "ERROR" ? "Erreur" : payload.title || "Notification";
-        const type = event === "ERROR" ? "error" : payload.type || "info";
+      if (event === "NOTIFICATION" || event === "MEETING_UPDATED" || event === "ERROR") {
+        let title = "Notification";
+        let message = payload.message || "Mise à jour disponible";
+        let type = "info";
+        let icon = FileText;
 
-        addToast(title, message, type);
+        if (payload.status === "completed" || event === "MEETING_COMPLETED") {
+          title = "Réunion analysée";
+          message = payload.title ? `L'analyse de "${payload.title}" est terminée.` : "Compte-rendu et synthèses disponibles.";
+          type = "success";
+          icon = CheckCircle2;
+        } else if (payload.type === "report_generated") {
+          title = "Rapport généré";
+          message = "Nouveau compte-rendu disponible au téléchargement.";
+          type = "success";
+          icon = FileText;
+        } else if (event === "ERROR" || payload.status === "failed") {
+          title = "Analyse interrompue";
+          message = "L'analyse a rencontré une difficulté. Veuillez rééessayer.";
+          type = "warning";
+          icon = AlertTriangle;
+        }
+
+        addToast(title, message, type, icon);
       }
     };
 
     const unsubscribe = subscribe("*", handleEvent);
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [subscribe]);
 
-  const addToast = (title, message, type) => {
+  const addToast = (title, message, type, IconComponent) => {
     const id = Math.random().toString(36).substr(2, 9);
-    setToasts((prev) => [...prev, { id, title, message, type }]);
+    setToasts((prev) => [...prev, { id, title, message, type, IconComponent }]);
+    setUnreadCount((prev) => prev + 1);
 
-    // Auto-dismiss après 5s
     setTimeout(() => {
       removeToast(id);
-    }, 5000);
+    }, 6000);
   };
 
   const removeToast = (id) => {
@@ -45,92 +60,33 @@ export const NotificationCenter = () => {
   };
 
   return (
-    <div style={styles.container}>
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          style={{
-            ...styles.toast,
-            ...styles[toast.type],
-          }}
-        >
-          <div style={styles.header}>
-            <span style={styles.title}>{toast.title}</span>
-            <button style={styles.closeBtn} onClick={() => removeToast(toast.id)}>
-              &times;
-            </button>
-          </div>
-          <div style={styles.message}>{toast.message}</div>
-        </div>
-      ))}
+    <div className="notification-wrapper">
+      {/* Popups Toasts */}
+      <div className="toast-container">
+        {toasts.map((toast) => {
+          const Icon = toast.IconComponent || FileText;
+          return (
+            <div key={toast.id} className={`toast-card toast-${toast.type}`}>
+              <div className="toast-icon">
+                <Icon size={18} />
+              </div>
+              <div className="toast-content">
+                <h4 className="toast-title">{toast.title}</h4>
+                <p className="toast-message">{toast.message}</p>
+              </div>
+              <button
+                className="toast-close-btn"
+                onClick={() => removeToast(toast.id)}
+                aria-label="Fermer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    position: "fixed",
-    top: "24px",
-    right: "24px",
-    zIndex: 9999,
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    width: "320px",
-    pointerEvents: "none",
-  },
-  toast: {
-    pointerEvents: "auto",
-    padding: "16px",
-    borderRadius: "12px",
-    backdropFilter: "blur(12px)",
-    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    fontFamily: "'Inter', sans-serif",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    animation: "slideIn 0.3s forwards",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "6px",
-  },
-  title: {
-    fontWeight: 600,
-    fontSize: "14px",
-    color: "#fff",
-  },
-  message: {
-    fontSize: "13px",
-    color: "rgba(255, 255, 255, 0.8)",
-    lineHeight: "1.4",
-  },
-  closeBtn: {
-    background: "none",
-    border: "none",
-    color: "rgba(255, 255, 255, 0.6)",
-    fontSize: "18px",
-    cursor: "pointer",
-    padding: 0,
-    lineHeight: "1",
-  },
-  // Variantes de styles par type
-  info: {
-    background: "rgba(30, 41, 59, 0.85)", // Slate
-  },
-  success: {
-    background: "rgba(6, 78, 59, 0.85)", // Emerald
-    borderLeft: "4px solid #10b981",
-  },
-  warning: {
-    background: "rgba(120, 53, 4, 0.85)", // Amber
-    borderLeft: "4px solid #f59e0b",
-  },
-  error: {
-    background: "rgba(153, 27, 27, 0.85)", // Red
-    borderLeft: "4px solid #ef4444",
-  },
 };
 
 export default NotificationCenter;

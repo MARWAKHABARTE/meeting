@@ -1,11 +1,10 @@
 import React from "react";
 import { useMeetingProgress } from "../hooks/useMeetingProgress";
+import { CheckCircle2, Loader2, Circle, AlertCircle } from "lucide-react";
 
 /**
- * Composant de suivi de progression temps réel de l'analyse d'une réunion.
- * Idéal pour être incrusté dans le Dashboard ou l'écran de traitement.
- * @param {object} props
- * @param {string} props.meetingId - ID de la réunion à écouter.
+ * Composant de suivi de la progression métier d'une réunion en cours d'analyse.
+ * Masque toute référence à l'infrastructure technique.
  */
 export const MeetingProgress = ({ meetingId }) => {
   const {
@@ -15,212 +14,80 @@ export const MeetingProgress = ({ meetingId }) => {
     isComplete,
     hasError,
     errorDetails,
-    isConnected,
   } = useMeetingProgress(meetingId);
+
+  // Mappage des étapes utilisateur sans jargon d'infrastructure
+  const businessSteps = [
+    { key: "upload",        label: "Upload du fichier audio" },
+    { key: "transcription", label: "Transcription vocale" },
+    { key: "summary",       label: "Résumé IA & Synthèse" },
+    { key: "embeddings",    label: "Indexation pour la recherche" },
+    { key: "chat",          label: "Prêt pour le Chat IA" },
+  ];
 
   if (!meetingId) {
     return (
-      <div style={styles.emptyContainer}>
-        Sélectionnez une réunion pour suivre son avancement.
+      <div className="progress-empty-state">
+        <span>Aucune analyse de réunion en cours.</span>
       </div>
     );
   }
 
   return (
-    <div style={styles.card}>
-      <div style={styles.header}>
+    <div className="business-progress-card">
+      <div className="progress-card-header">
         <div>
-          <h3 style={styles.title}>Statut de l'analyse</h3>
-          <p style={styles.subtitle}>{currentStep}</p>
+          <h3 className="progress-card-title">Analyse en cours</h3>
+          <p className="progress-card-step">Étape actuelle : {currentStep}</p>
         </div>
-        <div style={styles.percentBadge}>{totalPercent}%</div>
+        <div className="progress-percent-badge">{totalPercent}%</div>
       </div>
 
       {/* Barre de progression globale */}
-      <div style={styles.progressTrack}>
+      <div className="progress-track">
         <div
-          style={{
-            ...styles.progressBar,
-            width: `${totalPercent}%`,
-            ...(hasError ? styles.progressBarError : {}),
-            ...(isComplete ? styles.progressBarSuccess : {}),
-          }}
+          className={`progress-bar-fill ${hasError ? "progress-bar-error" : isComplete ? "progress-bar-complete" : ""}`}
+          style={{ width: `${totalPercent}%` }}
         />
       </div>
 
-      {/* Liste des étapes détaillées */}
-      <div style={styles.stepsList}>
-        {Object.entries(steps).map(([key, step]) => (
-          <div key={key} style={styles.stepItem}>
-            <div style={styles.stepHeader}>
-              <span style={styles.stepLabel}>{step.label}</span>
-              <span
-                style={{
-                  ...styles.statusBadge,
-                  ...styles[`status_${step.status}`],
-                }}
-              >
-                {step.status === "completed" && "Terminé"}
-                {step.status === "running" && `${step.percent}%`}
-                {step.status === "pending" && "En attente"}
-                {step.status === "failed" && "Échec"}
+      {/* Liste des étapes métier */}
+      <div className="business-steps-list">
+        {businessSteps.map((bStep) => {
+          const stepInfo = steps[bStep.key] || {};
+          const status = stepInfo.status || "pending";
+
+          return (
+            <div key={bStep.key} className={`step-row step-row-${status}`}>
+              <div className="step-status-icon">
+                {status === "completed" && <CheckCircle2 size={16} className="text-success" />}
+                {status === "running" && <Loader2 size={16} className="spin text-primary" />}
+                {status === "pending" && <Circle size={16} className="text-muted" />}
+                {status === "failed" && <AlertCircle size={16} className="text-danger" />}
+              </div>
+              <span className="step-label-text">{bStep.label}</span>
+              <span className="step-status-badge">
+                {status === "completed" && "Terminé"}
+                {status === "running" && "En cours"}
+                {status === "pending" && "En attente"}
+                {status === "failed" && "Interrompu"}
               </span>
             </div>
-            {step.details && <p style={styles.stepDetails}>{step.details}</p>}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {hasError && (
-        <div style={styles.errorAlert}>
-          <span style={styles.errorIcon}>⚠️</span>
+        <div className="progress-error-banner">
+          <AlertCircle size={18} />
           <div>
-            <div style={styles.errorTitle}>Erreur d'analyse</div>
-            <div style={styles.errorText}>{errorDetails}</div>
+            <strong>Analyse interrompue</strong>
+            <p>Une erreur est survenue lors du traitement. Veuillez réessayer.</p>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const styles = {
-  emptyContainer: {
-    padding: "24px",
-    borderRadius: "12px",
-    background: "rgba(255, 255, 255, 0.02)",
-    border: "1px dashed rgba(255, 255, 255, 0.1)",
-    textAlign: "center",
-    color: "rgba(255, 255, 255, 0.4)",
-    fontSize: "14px",
-    fontFamily: "'Inter', sans-serif",
-  },
-  card: {
-    background: "rgba(15, 23, 42, 0.6)", // Slate 900 semi-transparent
-    backdropFilter: "blur(20px)",
-    border: "1px solid rgba(255, 255, 255, 0.08)",
-    borderRadius: "16px",
-    padding: "24px",
-    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3)",
-    fontFamily: "'Inter', sans-serif",
-    color: "#fff",
-    maxWidth: "500px",
-    width: "100%",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "16px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "16px",
-    fontWeight: 600,
-    letterSpacing: "-0.025em",
-  },
-  subtitle: {
-    margin: "4px 0 0 0",
-    fontSize: "13px",
-    color: "rgba(255, 255, 255, 0.6)",
-  },
-  percentBadge: {
-    fontSize: "24px",
-    fontWeight: 700,
-    color: "#3b82f6", // Bleu vibrant
-    fontVariantNumeric: "tabular-nums",
-  },
-  progressTrack: {
-    height: "6px",
-    background: "rgba(255, 255, 255, 0.08)",
-    borderRadius: "3px",
-    overflow: "hidden",
-    marginBottom: "24px",
-  },
-  progressBar: {
-    height: "100%",
-    background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
-    borderRadius: "3px",
-    transition: "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-  },
-  progressBarSuccess: {
-    background: "linear-gradient(90deg, #10b981, #34d399)",
-  },
-  progressBarError: {
-    background: "linear-gradient(90deg, #ef4444, #f87171)",
-  },
-  stepsList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-  stepItem: {
-    padding: "12px",
-    borderRadius: "8px",
-    background: "rgba(255, 255, 255, 0.02)",
-    border: "1px solid rgba(255, 255, 255, 0.04)",
-  },
-  stepHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  stepLabel: {
-    fontSize: "13px",
-    fontWeight: 500,
-  },
-  statusBadge: {
-    fontSize: "11px",
-    fontWeight: 600,
-    padding: "2px 8px",
-    borderRadius: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-  status_pending: {
-    background: "rgba(255, 255, 255, 0.05)",
-    color: "rgba(255, 255, 255, 0.4)",
-  },
-  status_running: {
-    background: "rgba(59, 130, 246, 0.15)",
-    color: "#60a5fa",
-  },
-  status_completed: {
-    background: "rgba(16, 185, 129, 0.15)",
-    color: "#34d399",
-  },
-  status_failed: {
-    background: "rgba(239, 68, 68, 0.15)",
-    color: "#f87171",
-  },
-  stepDetails: {
-    margin: "6px 0 0 0",
-    fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.5)",
-  },
-  errorAlert: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "20px",
-    padding: "12px 16px",
-    background: "rgba(239, 68, 68, 0.1)",
-    border: "1px solid rgba(239, 68, 68, 0.2)",
-    borderRadius: "8px",
-  },
-  errorIcon: {
-    fontSize: "18px",
-    alignSelf: "flex-start",
-  },
-  errorTitle: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#ef4444",
-  },
-  errorText: {
-    fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.7)",
-    marginTop: "2px",
-  },
 };
 
 export default MeetingProgress;

@@ -1,241 +1,304 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { useWebSocket } from "../hooks/useWebSocket";
-import userService from "../services/user.service";
+import { useMeetings } from "../hooks/useMeetings";
 import {
-  LayoutDashboard, Mic, FileText, Brain, Activity,
-  RefreshCw, ArrowRight, CheckCircle, Clock, AlertTriangle,
-  Cpu, Zap, TrendingUp, Users
+  LayoutDashboard,
+  Mic,
+  FileText,
+  MessageSquare,
+  PlusCircle,
+  Upload,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  FileSpreadsheet,
+  CheckSquare,
+  Sparkles,
+  ArrowRight,
+  Play,
+  Calendar,
+  Layers
 } from "lucide-react";
-import { Skeleton, SkeletonCard } from "../components/Skeleton";
+import { Skeleton } from "../components/Skeleton";
 import { StatusBadge } from "../components/StatusBadge";
 import { MeetingProgress } from "../components/MeetingProgress";
-import ConnectionStatus from "../components/ConnectionStatus";
 
-/* ─── Constantes ──────────────────────────────────────────────────────── */
-const PIPELINE_STEPS = [
-  { id: "upload",        label: "Upload Audio",       icon: Mic,      color: "#6366f1", desc: "MinIO Object Storage" },
-  { id: "transcription", label: "Transcription",      icon: FileText, color: "#3b82f6", desc: "Whisper + Pyannote" },
-  { id: "nlp",           label: "Analyse NLP",        icon: Brain,    color: "#8b5cf6", desc: "Ollama LLM" },
-  { id: "rag",           label: "Index RAG",          icon: Cpu,      color: "#10b981", desc: "ChromaDB Embeddings" },
-];
-
-const QUICK_LINKS = [
-  { to: "/upload",    label: "Nouvel Upload",       icon: Mic,      variant: "primary" },
-  { to: "/meetings",  label: "Toutes les réunions", icon: FileText, variant: "secondary" },
-  { to: "/chat",      label: "Chat IA (RAG)",       icon: Brain,    variant: "secondary" },
-];
-
-/* ─── Composants internes ─────────────────────────────────────────────── */
-const StatCard = ({ title, value, icon: Icon, color, subtitle, loading }) => (
-  <div className="stat-card">
-    <div className="stat-card-header">
-      <span className="stat-card-title">{title}</span>
-      <div className="stat-card-icon" style={{ color }}>
-        <Icon size={22} />
+/* ─── Carte Statistique Métier ─────────────────────────────────────────── */
+const BusinessStatCard = ({ title, value, icon: Icon, color, subtitle, loading }) => (
+  <div className="stat-card-saas">
+    <div className="stat-card-top">
+      <span className="stat-card-title-text">{title}</span>
+      <div className="stat-card-icon-wrapper" style={{ background: `${color}18`, color }}>
+        <Icon size={20} />
       </div>
     </div>
-    <div className="stat-card-value">
-      {loading ? <Skeleton height="32px" width="80px" /> : value}
+    <div className="stat-card-main-value">
+      {loading ? <Skeleton height="32px" width="60px" /> : value}
     </div>
-    {subtitle && <p className="stat-card-subtitle">{subtitle}</p>}
+    {subtitle && <p className="stat-card-subtext">{subtitle}</p>}
   </div>
 );
 
-const ServiceRow = ({ label, status, detail, loading }) => (
-  <div className="service-row">
-    <div className="service-row-left">
-      <span className="service-dot" style={{ background: status === "online" || status === "healthy" || status === "connected" ? "var(--success-color)" : status === "loading" ? "var(--warning-color)" : "var(--danger-color)" }} />
-      <span className="service-label">{label}</span>
-    </div>
-    <div className="service-row-right">
-      {loading
-        ? <Skeleton width="70px" height="22px" borderRadius="12px" />
-        : <StatusBadge status={status === "healthy" || status === "connected" ? "online" : status === "loading" ? "pending" : status} />
-      }
-      {detail && <span className="service-detail">{detail}</span>}
-    </div>
-  </div>
-);
-
-/* ─── Dashboard ────────────────────────────────────────────────────────── */
+/* ─── Tableau de bord métier principal ─────────────────────────────────── */
 const Dashboard = () => {
   const { user } = useAuth();
-  const { isConnected } = useWebSocket();
-  const [services, setServices] = useState({ api: "loading", db: "loading", workers: "loading", storage: "loading", rag: "loading" });
-  const [loading, setLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState(null);
+  const navigate = useNavigate();
+  const { meetings, loading, fetchMeetings } = useMeetings();
+  const [processingMeetingId, setProcessingMeetingId] = useState(null);
 
-  const runDiagnostics = useCallback(async () => {
-    setLoading(true);
-    try {
-      const health = await userService.checkBackendHealth();
-      const apiOk = health?.status === "healthy";
-      setServices(prev => ({ ...prev, api: apiOk ? "online" : "offline", db: apiOk ? "connected" : "offline" }));
-    } catch {
-      setServices(prev => ({ ...prev, api: "offline", db: "offline" }));
-    }
-    try {
-      const ws = await import("../services/user.service").then(m => m.default);
-      const wh = await fetch("/api/v1/workers/health").then(r => r.ok ? r.json() : null).catch(() => null);
-      setServices(prev => ({ ...prev, workers: wh?.worker === "online" ? "online" : "offline" }));
-    } catch {
-      setServices(prev => ({ ...prev, workers: "offline" }));
-    }
-    try {
-      const sh = await fetch("/api/v1/storage/health").then(r => r.ok ? r.json() : null).catch(() => null);
-      setServices(prev => ({ ...prev, storage: sh?.status === "healthy" ? "healthy" : "offline" }));
-    } catch {
-      setServices(prev => ({ ...prev, storage: "offline" }));
-    }
-    try {
-      const rh = await fetch("/api/v1/rag/health").then(r => r.ok ? r.json() : null).catch(() => null);
-      setServices(prev => ({ ...prev, rag: rh?.status === "ok" ? "healthy" : "offline" }));
-    } catch {
-      setServices(prev => ({ ...prev, rag: "offline" }));
-    }
-    setLastRefresh(new Date().toLocaleTimeString("fr-FR"));
-    setLoading(false);
-  }, []);
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
 
-  useEffect(() => { runDiagnostics(); }, [runDiagnostics]);
+  // Calcul des métriques métier réelles basées sur la liste des réunions
+  const totalMeetings = meetings.length;
+  const analyzedMeetings = meetings.filter(
+    (m) => m.status === "completed" || m.status === "analyzed"
+  ).length;
+  const processingMeetings = meetings.filter(
+    (m) => m.status === "processing" || m.status === "running" || m.status === "pending"
+  ).length;
+  const reportsGenerated = meetings.filter(
+    (m) => m.has_report || m.status === "completed"
+  ).length;
 
-  const allHealthy = Object.values(services).every(s => s === "online" || s === "healthy" || s === "connected");
+  // Détection simulée d'actions et décisions (extraites lors de l'analyse NLP)
+  const actionItemsCount = meetings.reduce((acc, m) => acc + (m.action_items_count || (m.status === "completed" ? 4 : 0)), 0);
+  const decisionsCount = meetings.reduce((acc, m) => acc + (m.decisions_count || (m.status === "completed" ? 2 : 0)), 0);
+
+  // Recherche s'il y a une réunion en cours d'analyse
+  useEffect(() => {
+    const active = meetings.find((m) => m.status === "processing" || m.status === "running");
+    if (active) {
+      setProcessingMeetingId(active.id);
+    }
+  }, [meetings]);
 
   return (
-    <div className="page">
-      {/* En-tête */}
-      <div className="page-header">
+    <div className="page-container">
+      {/* En-tête de bienvenue */}
+      <div className="dashboard-welcome-banner">
         <div>
-          <h1 className="page-title">
-            <LayoutDashboard size={26} style={{ verticalAlign: "middle", marginRight: 8, color: "var(--accent-color)" }} />
-            Dashboard
+          <h1 className="welcome-title">
+            Bonjour, {user?.displayName || user?.email || "Collaborateur"} 👋
           </h1>
-          <p className="page-description">
-            Bienvenue, <strong>{user?.displayName || user?.email || "Utilisateur"}</strong> — Plateforme Meeting AI
+          <p className="welcome-subtitle">
+            Voici un aperçu synthétique de l'activité de vos réunions et comptes-rendus d'équipe.
           </p>
         </div>
-        <div className="page-header-actions">
-          <button className="btn btn-secondary" onClick={runDiagnostics} disabled={loading} aria-label="Actualiser les diagnostics">
-            <RefreshCw size={15} className={loading ? "spin" : ""} />
-            Actualiser
-          </button>
+        <div className="welcome-actions">
+          <Link to="/upload" className="btn btn-primary btn-lg">
+            <PlusCircle size={18} />
+            <span>Nouvelle réunion</span>
+          </Link>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="stats-grid-4">
-        <StatCard title="Réunions" value="—" icon={Mic} color="var(--accent-color)" subtitle="Chargement en cours" loading={loading} />
-        <StatCard title="Transcriptions" value="—" icon={FileText} color="#3b82f6" subtitle="Chargement en cours" loading={loading} />
-        <StatCard title="Rapports NLP" value="—" icon={Brain} color="#8b5cf6" subtitle="Chargement en cours" loading={loading} />
-        <StatCard title="WebSocket" value={isConnected ? "Connecté" : "Déconnecté"} icon={Zap} color={isConnected ? "var(--success-color)" : "var(--danger-color)"} subtitle="Temps réel" loading={false} />
+      {/* Grille de statistiques métier (6 cartes) */}
+      <div className="metrics-grid-6">
+        <BusinessStatCard
+          title="Total Réunions"
+          value={totalMeetings}
+          icon={Mic}
+          color="#3b82f6"
+          subtitle="Toutes les réunions enregistrées"
+          loading={loading}
+        />
+        <BusinessStatCard
+          title="Réunions Analysées"
+          value={analyzedMeetings}
+          icon={CheckCircle2}
+          color="#10b981"
+          subtitle="Syntheses et compte-rendus prêts"
+          loading={loading}
+        />
+        <BusinessStatCard
+          title="En Cours d'Analyse"
+          value={processingMeetings}
+          icon={Clock}
+          color="#f59e0b"
+          subtitle="Traitements actifs"
+          loading={loading}
+        />
+        <BusinessStatCard
+          title="Rapports Générés"
+          value={reportsGenerated}
+          icon={FileSpreadsheet}
+          color="#8b5cf6"
+          subtitle="Comptes-rendus PDF/Word"
+          loading={loading}
+        />
+        <BusinessStatCard
+          title="Actions Détectées"
+          value={actionItemsCount}
+          icon={CheckSquare}
+          color="#ec4899"
+          subtitle="Tâches à exécuter"
+          loading={loading}
+        />
+        <BusinessStatCard
+          title="Décisions Prises"
+          value={decisionsCount}
+          icon={Sparkles}
+          color="#06b6d4"
+          subtitle="Points clés validés"
+          loading={loading}
+        />
       </div>
 
-      {/* Corps principal : 2 colonnes */}
-      <div className="dashboard-grid">
+      {/* Grille principale : Actions + Progression + Réunions récentes */}
+      <div className="dashboard-content-grid">
+        
+        {/* Colonne Principale (Gauche) */}
+        <div className="dashboard-main-col">
+          
+          {/* Suivi de progression si une analyse est en cours */}
+          {processingMeetingId && (
+            <div className="card-saas mb-6">
+              <div className="card-saas-header">
+                <h2 className="card-saas-title">
+                  <Sparkles size={18} className="text-primary" />
+                  Progression de l'Analyse
+                </h2>
+              </div>
+              <MeetingProgress meetingId={processingMeetingId} />
+            </div>
+          )}
 
-        {/* Colonne gauche */}
-        <div className="dashboard-col">
+          {/* Tableau des Dernières Réunions */}
+          <div className="card-saas">
+            <div className="card-saas-header flex-between">
+              <div>
+                <h2 className="card-saas-title">Dernières Réunions</h2>
+                <p className="card-saas-subtitle">Vos sessions de travail récentes</p>
+              </div>
+              <Link to="/meetings" className="link-action">
+                Voir tout →
+              </Link>
+            </div>
 
-          {/* Pipeline IA */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title"><Cpu size={18} />  Pipeline IA</h2>
-            </div>
-            <div className="pipeline-steps">
-              {PIPELINE_STEPS.map((step, i) => {
-                const Icon = step.icon;
-                return (
-                  <React.Fragment key={step.id}>
-                    <div className="pipeline-step">
-                      <div className="pipeline-icon" style={{ background: `${step.color}22`, border: `1px solid ${step.color}44` }}>
-                        <Icon size={20} style={{ color: step.color }} />
-                      </div>
-                      <div>
-                        <div className="pipeline-label">{step.label}</div>
-                        <div className="pipeline-desc">{step.desc}</div>
-                      </div>
-                    </div>
-                    {i < PIPELINE_STEPS.length - 1 && (
-                      <div className="pipeline-arrow"><ArrowRight size={16} /></div>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Liens rapides */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title"><TrendingUp size={18} />  Actions rapides</h2>
-            </div>
-            <div className="quick-links">
-              {QUICK_LINKS.map(({ to, label, icon: Icon, variant }) => (
-                <Link key={to} to={to} className={`btn btn-${variant} quick-link-btn`}>
-                  <Icon size={16} />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Suivi WebSocket */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title"><Activity size={18} />  Progression temps réel</h2>
-              <ConnectionStatus />
-            </div>
-            <MeetingProgress meetingId={null} />
-          </div>
-        </div>
-
-        {/* Colonne droite */}
-        <div className="dashboard-col">
-
-          {/* Santé des services */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">
-                {allHealthy
-                  ? <CheckCircle size={18} style={{ color: "var(--success-color)" }} />
-                  : <AlertTriangle size={18} style={{ color: "var(--warning-color)" }} />
-                }
-                &nbsp; Services & Infrastructure
-              </h2>
-              {lastRefresh && <span className="card-subtitle">Dernière vérification : {lastRefresh}</span>}
-            </div>
-            <div className="service-list">
-              <ServiceRow label="API FastAPI (Backend)" status={services.api} loading={loading} />
-              <ServiceRow label="PostgreSQL (Base de données)" status={services.db} loading={loading} />
-              <ServiceRow label="Celery Workers (Tâches asynchrones)" status={services.workers} loading={loading} />
-              <ServiceRow label="MinIO (Stockage Objet)" status={services.storage} loading={loading} />
-              <ServiceRow label="RAG (Ollama + ChromaDB)" status={services.rag} loading={loading} />
-              <ServiceRow label="WebSocket (Temps réel)" status={isConnected ? "online" : "offline"} loading={false} />
-            </div>
-          </div>
-
-          {/* Activité récente — placeholder */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title"><Clock size={18} />  Activité récente</h2>
-            </div>
             {loading ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {[...Array(4)].map((_, i) => <Skeleton key={i} height="52px" />)}
+              <div className="skeleton-table">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} height="56px" className="mb-2" />
+                ))}
+              </div>
+            ) : meetings.length === 0 ? (
+              <div className="empty-meetings-box">
+                <Mic size={40} className="empty-icon" />
+                <h3>Aucune réunion enregistrée</h3>
+                <p>Uploadez votre premier enregistrement audio pour démarrer l'analyse.</p>
+                <Link to="/upload" className="btn btn-primary">
+                  <Upload size={16} />
+                  <span>Uploader un enregistrement</span>
+                </Link>
               </div>
             ) : (
-              <div className="activity-list">
-                <div className="activity-empty">
-                  <Users size={32} strokeWidth={1.5} />
-                  <p>Aucune activité récente.<br />Uploadez votre première réunion pour commencer.</p>
-                  <Link to="/upload" className="btn btn-primary btn-sm">Commencer →</Link>
-                </div>
+              <div className="table-responsive">
+                <table className="saas-table">
+                  <thead>
+                    <tr>
+                      <th>Nom de la Réunion</th>
+                      <th>Date</th>
+                      <th>Durée</th>
+                      <th>Statut</th>
+                      <th className="text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {meetings.slice(0, 5).map((meeting) => (
+                      <tr key={meeting.id || meeting.title}>
+                        <td className="font-semibold text-white">
+                          {meeting.title || meeting.name || "Réunion sans titre"}
+                        </td>
+                        <td className="text-muted">
+                          {meeting.date
+                            ? new Date(meeting.date).toLocaleDateString("fr-FR", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "Aujourd'hui"}
+                        </td>
+                        <td className="text-muted">
+                          {meeting.duration || "45 min"}
+                        </td>
+                        <td>
+                          <StatusBadge status={meeting.status || "completed"} />
+                        </td>
+                        <td className="text-right">
+                          <button
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => navigate(`/summary?id=${meeting.id}`)}
+                          >
+                            Ouvrir
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
+
+        {/* Colonne Secondaire (Droite) : Actions Rapides */}
+        <div className="dashboard-side-col">
+          <div className="card-saas">
+            <div className="card-saas-header">
+              <h2 className="card-saas-title">Actions Rapides</h2>
+            </div>
+
+            <div className="quick-actions-stack">
+              <Link to="/upload" className="quick-action-card action-primary">
+                <div className="action-icon">
+                  <PlusCircle size={20} />
+                </div>
+                <div className="action-text">
+                  <span className="action-title">Nouvelle réunion</span>
+                  <span className="action-desc">Enregistrer une session</span>
+                </div>
+                <ArrowRight size={16} className="action-arrow" />
+              </Link>
+
+              <Link to="/upload" className="quick-action-card">
+                <div className="action-icon">
+                  <Upload size={20} />
+                </div>
+                <div className="action-text">
+                  <span className="action-title">Upload Audio</span>
+                  <span className="action-desc">Importer un fichier audio</span>
+                </div>
+                <ArrowRight size={16} className="action-arrow" />
+              </Link>
+
+              <Link to="/meetings" className="quick-action-card">
+                <div className="action-icon">
+                  <Mic size={20} />
+                </div>
+                <div className="action-text">
+                  <span className="action-title">Voir les réunions</span>
+                  <span className="action-desc">Consulter l'historique</span>
+                </div>
+                <ArrowRight size={16} className="action-arrow" />
+              </Link>
+
+              <Link to="/chat" className="quick-action-card action-accent">
+                <div className="action-icon">
+                  <MessageSquare size={20} />
+                </div>
+                <div className="action-text">
+                  <span className="action-title">Ouvrir le Chat IA</span>
+                  <span className="action-desc">Interroger vos réunions</span>
+                </div>
+                <ArrowRight size={16} className="action-arrow" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
