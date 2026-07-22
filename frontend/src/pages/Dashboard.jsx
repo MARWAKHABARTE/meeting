@@ -154,33 +154,34 @@ const Dashboard = () => {
     }
   }, [fetchMeetings, runAdminDiagnostics, user?.is_superuser]);
 
-  // Calcul des métriques métier réelles
-  const totalMeetings = meetings.length;
-  const analyzedMeetings = meetings.filter(
-    (m) => m.status === "completed" || m.status === "analyzed"
+  // Calcul des métriques métier réelles (sécurisé si meetings n'est pas un tableau)
+  const safeMeetings = Array.isArray(meetings) ? meetings : [];
+  const totalMeetings = safeMeetings.length;
+  const analyzedMeetings = safeMeetings.filter(
+    (m) => m && (m.status === "completed" || m.status === "analyzed")
   ).length;
-  const processingMeetings = meetings.filter(
-    (m) => m.status === "processing" || m.status === "running" || m.status === "pending"
+  const processingMeetings = safeMeetings.filter(
+    (m) => m && (m.status === "processing" || m.status === "running" || m.status === "pending")
   ).length;
-  const reportsGenerated = meetings.filter(
-    (m) => m.has_report || m.status === "completed"
+  const reportsGenerated = safeMeetings.filter(
+    (m) => m && (m.has_report || m.status === "completed")
   ).length;
 
-  const actionItemsCount = meetings.reduce(
-    (acc, m) => acc + (m.action_items_count || (m.status === "completed" ? 4 : 0)),
+  const actionItemsCount = safeMeetings.reduce(
+    (acc, m) => acc + (m?.action_items_count || (m?.status === "completed" ? 4 : 0)),
     0
   );
-  const decisionsCount = meetings.reduce(
-    (acc, m) => acc + (m.decisions_count || (m.status === "completed" ? 2 : 0)),
+  const decisionsCount = safeMeetings.reduce(
+    (acc, m) => acc + (m?.decisions_count || (m?.status === "completed" ? 2 : 0)),
     0
   );
 
   useEffect(() => {
-    const active = meetings.find((m) => m.status === "processing" || m.status === "running");
+    const active = safeMeetings.find((m) => m && (m.status === "processing" || m.status === "running"));
     if (active) {
       setProcessingMeetingId(active.id);
     }
-  }, [meetings]);
+  }, [safeMeetings]);
 
   return (
     <div className="page-container">
@@ -289,7 +290,7 @@ const Dashboard = () => {
                   <Skeleton key={i} height="56px" className="mb-2" />
                 ))}
               </div>
-            ) : meetings.length === 0 ? (
+            ) : safeMeetings.length === 0 ? (
               <div className="empty-meetings-box">
                 <Mic size={40} className="empty-icon" />
                 <h3>Aucune réunion enregistrée</h3>
@@ -312,7 +313,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {meetings.slice(0, 5).map((meeting) => (
+                    {safeMeetings.slice(0, 5).map((meeting) => (
                       <tr key={meeting.id || meeting.title}>
                         <td className="font-semibold text-white">
                           {meeting.title || meeting.name || "Réunion sans titre"}
