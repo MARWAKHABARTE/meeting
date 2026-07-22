@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     restoreSession();
-  }, [session?.access_token]);
+  }, []);
 
   // 2. Timer de rafraîchissement périodique (toutes les 60 secondes)
   useEffect(() => {
@@ -237,5 +237,5 @@ export const AuthProvider = ({ children }) => {
     logout
   }), [session, user, roles, loading, error, login, logout]);
 
-  return <AuthContext value={value}>{children}</AuthContext>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
