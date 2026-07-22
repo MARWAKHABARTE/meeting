@@ -62,6 +62,8 @@ const DEMO_TRANSCRIPT = {
 /* ─── Page ────────────────────────────────────────────────────────────── */
 const Transcript = () => {
   const { id } = useParams();
+  const effectiveId = id || "meeting-session-1";
+
   const [transcript, setTranscript] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -70,11 +72,9 @@ const Transcript = () => {
   const [selectedSpeaker, setSelectedSpeaker] = useState("all");
 
   useEffect(() => {
-    // En production, appel API réel ; ici on utilise les données de démo
     const loadTranscript = async () => {
       try {
-        // const data = await meetingService.getTranscription(id);
-        await new Promise((r) => setTimeout(r, 600)); // Simule latence
+        await new Promise((r) => setTimeout(r, 300));
         setTranscript(DEMO_TRANSCRIPT);
       } catch (err) {
         logger.error("[Transcript] Erreur chargement:", err.message);
@@ -84,7 +84,7 @@ const Transcript = () => {
       }
     };
     loadTranscript();
-  }, [id]);
+  }, [effectiveId]);
 
   const filteredSegments = useMemo(() => {
     if (!transcript?.segments) return [];
@@ -113,14 +113,14 @@ const Transcript = () => {
             <FileText size={24} style={{ verticalAlign: "middle", marginRight: 8, color: "var(--accent-color)" }} />
             Transcription
           </h1>
-          <p className="page-description">ID de réunion : <code className="code-inline">{id}</code></p>
+          <p className="page-description">ID de réunion : <code className="code-inline">{effectiveId}</code></p>
         </div>
         <div className="page-header-actions">
           <button className="btn btn-secondary" onClick={handleCopy} aria-label="Copier le texte complet">
             {copied ? <CheckCheck size={15} style={{ color: "var(--success-color)" }} /> : <Copy size={15} />}
             {copied ? "Copié !" : "Copier le texte"}
           </button>
-          <Link to={`/summary/${id}`} className="btn btn-primary">Voir le résumé →</Link>
+          <Link to={`/summary/${effectiveId}`} className="btn btn-primary">Voir le résumé →</Link>
         </div>
       </div>
 

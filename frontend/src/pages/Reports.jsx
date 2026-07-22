@@ -5,12 +5,20 @@ import { Skeleton } from "../components/Skeleton";
 import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
 
+const DEMO_REPORTS = [
+  { id: "rep-1", title: "Rapport Synthèse Executif — Sprint 10", meeting_id: "meeting-session-1", type: "PDF", created_at: new Date().toISOString() },
+  { id: "rep-2", title: "Compte Rendu & Actions — Lancement Project", meeting_id: "meeting-session-2", type: "TXT", created_at: new Date().toISOString() },
+  { id: "rep-3", title: "Analyse Sémantique & NLP — Comité Technique", meeting_id: "meeting-session-3", type: "PDF", created_at: new Date().toISOString() },
+];
+
 export const Reports = () => {
-  const { reports, loading, error, fetchReports, downloadReport } = useReport();
+  const { reports: apiReports, loading, error, fetchReports, downloadReport } = useReport();
 
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+
+  const reports = (apiReports && apiReports.length > 0) ? apiReports : DEMO_REPORTS;
 
   return (
     <div className="page">
@@ -32,8 +40,6 @@ export const Reports = () => {
         </div>
       ) : error ? (
         <EmptyState title="Erreur" description={error} />
-      ) : reports.length === 0 ? (
-        <EmptyState type="meetings" title="Aucun rapport généré" description="Les rapports s'affichent ici dès qu'une analyse est validée." />
       ) : (
         <div className="card table-card">
           <div className="table-scroll">

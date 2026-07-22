@@ -72,7 +72,9 @@ const MessageBubble = ({ message }) => {
 /* ─── Page Chat ────────────────────────────────────────────────────────── */
 const Chat = () => {
   const { meetingId } = useParams();
-  const { messages, loading, error, sendMessage, clearConversation } = useRAG(meetingId);
+  const activeMeetingId = meetingId || "meeting-session-1";
+
+  const { messages, loading, error, sendMessage, clearConversation } = useRAG(activeMeetingId);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -118,7 +120,7 @@ const Chat = () => {
           <div>
             <h1 className="chat-title">Chat IA — Réunion</h1>
             <p className="chat-subtitle">
-              <code className="code-inline">{meetingId}</code>
+              <code className="code-inline">{activeMeetingId}</code>
               {" "}· Alimenté par Ollama + ChromaDB RAG
             </p>
           </div>
@@ -186,11 +188,6 @@ const Chat = () => {
 
       {/* Zone de saisie */}
       <div className="chat-input-area">
-        {!meetingId && (
-          <div className="chat-warning">
-            ⚠️ Aucune réunion sélectionnée. <Link to="/meetings">Choisissez une réunion</Link> pour activer le chat.
-          </div>
-        )}
         <div className="chat-input-wrapper">
           <textarea
             ref={inputRef}
@@ -200,14 +197,13 @@ const Chat = () => {
             onKeyDown={handleKeyDown}
             placeholder="Posez votre question sur la réunion... (Entrée pour envoyer)"
             rows={1}
-            disabled={loading || !meetingId}
+            disabled={loading}
             aria-label="Message à envoyer à l'IA"
-            aria-disabled={!meetingId}
           />
           <button
             className="chat-send-btn"
             onClick={handleSend}
-            disabled={!inputValue.trim() || loading || !meetingId}
+            disabled={!inputValue.trim() || loading}
             aria-label="Envoyer le message"
           >
             {loading

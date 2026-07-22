@@ -85,7 +85,8 @@ const ActionItem = ({ item, index }) => {
 /* ─── Page ────────────────────────────────────────────────────────────── */
 const Summary = () => {
   const { id } = useParams();
-  const { summary: apiSummary, loading, error, fetchSummary, triggerSummary } = useSummary(id);
+  const effectiveId = id || "meeting-session-1";
+  const { summary: apiSummary, loading, error, fetchSummary, triggerSummary } = useSummary(effectiveId);
   const [triggering, setTriggering] = useState(false);
   const [triggerError, setTriggerError] = useState(null);
 
@@ -93,7 +94,7 @@ const Summary = () => {
   const data = apiSummary || DEMO_SUMMARY;
   const isDemo = !apiSummary;
 
-  useEffect(() => { fetchSummary(id); }, [id, fetchSummary]);
+  useEffect(() => { fetchSummary(effectiveId); }, [effectiveId, fetchSummary]);
 
   const handleTrigger = async () => {
     setTriggering(true);
@@ -199,7 +200,7 @@ const Summary = () => {
 
           {/* Navigation */}
           <div className="card nav-card">
-            <Link to={`/transcription/${id}`} className="nav-card-link">
+            <Link to={`/transcription/${effectiveId}`} className="nav-card-link">
               <FileText size={20} />
               <div>
                 <div className="nav-card-label">Voir la transcription complète</div>
@@ -207,7 +208,7 @@ const Summary = () => {
               </div>
               <ChevronLeft size={18} style={{ transform: "rotate(180deg)" }} />
             </Link>
-            <Link to={`/chat/${id}`} className="nav-card-link">
+            <Link to={`/chat/${effectiveId}`} className="nav-card-link">
               <MessageSquare size={20} />
               <div>
                 <div className="nav-card-label">Discuter avec l'IA (RAG)</div>
