@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useUpload } from "../hooks/useUpload";
 import { useMeetingProgress } from "../hooks/useMeetingProgress";
 import { Upload as UploadIcon, FileAudio, CheckCircle, AlertTriangle, X, Play, Loader } from "lucide-react";
