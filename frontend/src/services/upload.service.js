@@ -29,7 +29,7 @@ class UploadService {
     }
 
     try {
-      const res = await axiosInstance.post("/api/v1/storage/upload-test", formData, config);
+      const res = await axiosInstance.post("/v1/storage/upload-test", formData, config);
       logger.info(`[UploadService] Fichier '${file.name}' uploadé avec succès.`);
       return res.data;
     } catch (err) {
@@ -42,7 +42,7 @@ class UploadService {
    * Vérifie la santé du stockage MinIO.
    */
   async checkStorageHealth() {
-    const res = await axiosInstance.get("/api/v1/storage/health");
+    const res = await axiosInstance.get("/v1/storage/health");
     return res.data;
   }
 }

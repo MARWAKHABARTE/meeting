@@ -12,7 +12,7 @@ class MeetingService {
    */
   async getMeetings() {
     try {
-      const res = await axiosInstance.get("/api/v1/workers/health");
+      const res = await axiosInstance.get("/v1/workers/health");
       logger.debug("[MeetingService] Réunions récupérées.");
       return res.data;
     } catch (err) {
@@ -26,7 +26,7 @@ class MeetingService {
    * @param {string} meetingId
    */
   async getTranscription(meetingId) {
-    const res = await axiosInstance.get(`/api/v1/transcriptions/${meetingId}/result`);
+    const res = await axiosInstance.get(`/v1/transcriptions/${meetingId}/result`);
     return res.data;
   }
 
@@ -35,7 +35,7 @@ class MeetingService {
    * @param {string} meetingId
    */
   async startTranscription(meetingId) {
-    const res = await axiosInstance.post("/api/v1/transcriptions/start", { meeting_id: meetingId });
+    const res = await axiosInstance.post("/v1/transcriptions/start", { meeting_id: meetingId });
     return res.data;
   }
 
@@ -44,7 +44,7 @@ class MeetingService {
    * @param {string} taskId
    */
   async getTaskStatus(taskId) {
-    const res = await axiosInstance.get(`/api/v1/workers/tasks/${taskId}`);
+    const res = await axiosInstance.get(`/v1/workers/tasks/${taskId}`);
     return res.data;
   }
 
@@ -53,7 +53,7 @@ class MeetingService {
    * @param {string} meetingId
    */
   async startSummary(meetingId) {
-    const res = await axiosInstance.post("/api/v1/summaries/start", { meeting_id: meetingId });
+    const res = await axiosInstance.post("/v1/summaries/start", { meeting_id: meetingId });
     return res.data;
   }
 
@@ -62,7 +62,7 @@ class MeetingService {
    * @param {string} meetingId
    */
   async getSummary(meetingId) {
-    const res = await axiosInstance.get(`/api/v1/summaries/${meetingId}`);
+    const res = await axiosInstance.get(`/v1/summaries/${meetingId}`);
     return res.data;
   }
 }

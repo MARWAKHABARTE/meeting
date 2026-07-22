@@ -13,7 +13,7 @@ class RAGService {
    */
   async query(meetingId, question) {
     try {
-      const res = await axiosInstance.post("/api/v1/rag/query", {
+      const res = await axiosInstance.post("/v1/rag/query", {
         meeting_id: meetingId,
         question,
       });
@@ -29,7 +29,7 @@ class RAGService {
    * Vérifie la santé des services RAG (Ollama + ChromaDB).
    */
   async checkHealth() {
-    const res = await axiosInstance.get("/api/v1/rag/health");
+    const res = await axiosInstance.get("/v1/rag/health");
     return res.data;
   }
 }
