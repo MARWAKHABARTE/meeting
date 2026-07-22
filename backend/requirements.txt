@@ -1,0 +1,38 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+python-dotenv
+psycopg2-binary
+alembic
+PyJWT[crypto]
+httpx
+minio>=7.2.7
+python-multipart
+celery>=5.4.0
+redis>=5.0.1
+flower>=2.0.1
+pytest
+pytest-asyncio
+
+# ──────────────────────────────────────────────────────────────
+# Sprint 9 — Pipeline NLP + RAG
+# ──────────────────────────────────────────────────────────────
+# Sentence Transformers (embeddings)
+sentence-transformers>=3.0.0
+
+# ChromaDB (Vector Store local persistant)
+chromadb>=0.5.0
+
+# ──────────────────────────────────────────────────────────────
+# Sprint 8 — Pipeline IA Whisper + Pyannote
+# (Chargement conditionnel — requiert GPU/CPU compatible)
+# ──────────────────────────────────────────────────────────────
+openai-whisper
+faster-whisper>=1.0.0
+pyannote.audio>=3.1.1
+torch>=2.0.0
+prometheus-client>=0.20.0
+prometheus-fastapi-instrumentator>=7.0.0
+

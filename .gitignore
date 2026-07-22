@@ -1,0 +1,40 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Python cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Binaries and local server files
+nginx-1.26.1/
+temp_ai/
+chroma_db/
+
+# Gemini / Antigravity custom files
+.gemini/
+
