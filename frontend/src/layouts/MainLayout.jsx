@@ -6,20 +6,22 @@ import NotificationCenter from "../components/NotificationCenter";
 
 /**
  * Layout principal pour les pages sécurisées.
- * Dispose le Sidebar à gauche, le Navbar en haut et la zone de contenu scrollable.
+ * Dispose le Sidebar à gauche (colonne 1: 260px) et le main-container à droite (colonne 2: 1fr).
  */
 const MainLayout = () => {
   return (
-    <div className="app-layout">
+    <>
       <NotificationCenter />
-      <Sidebar />
-      <div className="main-container">
-        <Navbar />
-        <main className="content-area">
-          <Outlet />
-        </main>
+      <div className="app-layout">
+        <Sidebar />
+        <div className="main-container">
+          <Navbar />
+          <main className="content-area">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
