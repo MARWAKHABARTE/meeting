@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useMeetings } from "../hooks/useMeetings";
+import { useWebSocket } from "../hooks/useWebSocket";
+import userService from "../services/user.service";
 import {
   LayoutDashboard,
   Mic,
@@ -16,9 +18,9 @@ import {
   CheckSquare,
   Sparkles,
   ArrowRight,
-  Play,
-  Calendar,
-  Layers
+  Shield,
+  RefreshCw,
+  Server
 } from "lucide-react";
 import { Skeleton } from "../components/Skeleton";
 import { StatusBadge } from "../components/StatusBadge";
@@ -40,18 +42,119 @@ const BusinessStatCard = ({ title, value, icon: Icon, color, subtitle, loading }
   </div>
 );
 
+/* ─── Ligne Diagnostic Admin ───────────────────────────────────────────── */
+const ServiceRow = ({ label, status, loading }) => (
+  <div className="service-row">
+    <div className="service-row-left">
+      <span
+        className="service-dot"
+        style={{
+          background:
+            status === "online" || status === "healthy" || status === "connected"
+              ? "var(--success-color)"
+              : status === "loading"
+              ? "var(--warning-color)"
+              : "var(--danger-color)",
+        }}
+      />
+      <span className="service-label">{label}</span>
+    </div>
+    <div className="service-row-right">
+      {loading ? (
+        <Skeleton width="70px" height="22px" borderRadius="12px" />
+      ) : (
+        <StatusBadge
+          status={
+            status === "healthy" || status === "connected" || status === "online"
+              ? "online"
+              : status === "loading"
+              ? "pending"
+              : "offline"
+          }
+        />
+      )}
+    </div>
+  </div>
+);
+
 /* ─── Tableau de bord métier principal ─────────────────────────────────── */
 const Dashboard = () => {
   const { user } = useAuth();
+  const { isConnected } = useWebSocket();
   const navigate = useNavigate();
   const { meetings, loading, fetchMeetings } = useMeetings();
   const [processingMeetingId, setProcessingMeetingId] = useState(null);
 
+  // Diagnostic technique réservé à l'administrateur
+  const [services, setServices] = useState({
+    api: "loading",
+    db: "loading",
+    workers: "loading",
+    storage: "loading",
+    rag: "loading",
+  });
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(null);
+
+  const runAdminDiagnostics = useCallback(async () => {
+    if (!user?.is_superuser) return;
+    setDiagLoading(true);
+    try {
+      const health = await userService.checkBackendHealth();
+      const apiOk = health?.status === "healthy";
+      setServices((prev) => ({
+        ...prev,
+        api: apiOk ? "online" : "offline",
+        db: apiOk ? "online" : "offline",
+      }));
+    } catch {
+      setServices((prev) => ({ ...prev, api: "offline", db: "offline" }));
+    }
+    try {
+      const wh = await fetch("/api/v1/workers/health")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      setServices((prev) => ({
+        ...prev,
+        workers: wh?.broker === "connected" || wh?.worker === "online" ? "online" : "offline",
+      }));
+    } catch {
+      setServices((prev) => ({ ...prev, workers: "offline" }));
+    }
+    try {
+      const sh = await fetch("/api/v1/storage/health")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      setServices((prev) => ({
+        ...prev,
+        storage: sh?.status === "healthy" ? "online" : "offline",
+      }));
+    } catch {
+      setServices((prev) => ({ ...prev, storage: "offline" }));
+    }
+    try {
+      const rh = await fetch("/api/v1/rag/health")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      setServices((prev) => ({
+        ...prev,
+        rag: rh?.status === "healthy" || rh?.status === "ok" ? "online" : "offline",
+      }));
+    } catch {
+      setServices((prev) => ({ ...prev, rag: "offline" }));
+    }
+    setLastRefresh(new Date().toLocaleTimeString("fr-FR"));
+    setDiagLoading(false);
+  }, [user?.is_superuser]);
+
   useEffect(() => {
     fetchMeetings();
-  }, [fetchMeetings]);
+    if (user?.is_superuser) {
+      runAdminDiagnostics();
+    }
+  }, [fetchMeetings, runAdminDiagnostics, user?.is_superuser]);
 
-  // Calcul des métriques métier réelles basées sur la liste des réunions
+  // Calcul des métriques métier réelles
   const totalMeetings = meetings.length;
   const analyzedMeetings = meetings.filter(
     (m) => m.status === "completed" || m.status === "analyzed"
@@ -63,11 +166,15 @@ const Dashboard = () => {
     (m) => m.has_report || m.status === "completed"
   ).length;
 
-  // Détection simulée d'actions et décisions (extraites lors de l'analyse NLP)
-  const actionItemsCount = meetings.reduce((acc, m) => acc + (m.action_items_count || (m.status === "completed" ? 4 : 0)), 0);
-  const decisionsCount = meetings.reduce((acc, m) => acc + (m.decisions_count || (m.status === "completed" ? 2 : 0)), 0);
+  const actionItemsCount = meetings.reduce(
+    (acc, m) => acc + (m.action_items_count || (m.status === "completed" ? 4 : 0)),
+    0
+  );
+  const decisionsCount = meetings.reduce(
+    (acc, m) => acc + (m.decisions_count || (m.status === "completed" ? 2 : 0)),
+    0
+  );
 
-  // Recherche s'il y a une réunion en cours d'analyse
   useEffect(() => {
     const active = meetings.find((m) => m.status === "processing" || m.status === "running");
     if (active) {
@@ -149,10 +256,8 @@ const Dashboard = () => {
 
       {/* Grille principale : Actions + Progression + Réunions récentes */}
       <div className="dashboard-content-grid">
-        
         {/* Colonne Principale (Gauche) */}
         <div className="dashboard-main-col">
-          
           {/* Suivi de progression si une analyse est en cours */}
           {processingMeetingId && (
             <div className="card-saas mb-6">
@@ -221,9 +326,7 @@ const Dashboard = () => {
                               })
                             : "Aujourd'hui"}
                         </td>
-                        <td className="text-muted">
-                          {meeting.duration || "45 min"}
-                        </td>
+                        <td className="text-muted">{meeting.duration || "45 min"}</td>
                         <td>
                           <StatusBadge status={meeting.status || "completed"} />
                         </td>
@@ -242,6 +345,40 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+
+          {/* Section réservée STRICTEMENT à l'Administrateur */}
+          {user?.is_superuser && (
+            <div className="card-saas mt-6 border-admin">
+              <div className="card-saas-header flex-between">
+                <div>
+                  <h2 className="card-saas-title text-amber">
+                    <Shield size={18} />
+                    Services & Infrastructure (Vue Administrateur)
+                  </h2>
+                  <p className="card-saas-subtitle">
+                    Cette section est uniquement visible par les administrateurs.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={runAdminDiagnostics}
+                  disabled={diagLoading}
+                >
+                  <RefreshCw size={14} className={diagLoading ? "spin" : ""} />
+                  Actualiser
+                </button>
+              </div>
+
+              <div className="service-list">
+                <ServiceRow label="API FastAPI (Backend)" status={services.api} loading={diagLoading} />
+                <ServiceRow label="PostgreSQL (Base de données)" status={services.db} loading={diagLoading} />
+                <ServiceRow label="Celery Workers (Tâches asynchrones)" status={services.workers} loading={diagLoading} />
+                <ServiceRow label="MinIO (Stockage Objet)" status={services.storage} loading={diagLoading} />
+                <ServiceRow label="RAG (Ollama + ChromaDB)" status={services.rag} loading={diagLoading} />
+                <ServiceRow label="WebSocket (Temps réel)" status={isConnected ? "online" : "offline"} loading={false} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Colonne Secondaire (Droite) : Actions Rapides */}
@@ -298,7 +435,6 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
