@@ -105,9 +105,15 @@ const Upload = () => {
   const handleUpload = useCallback(async () => {
     try {
       const result = await upload();
-      // En production, l'API retourne un meeting_id après upload
-      // Ici on simule avec l'URL du fichier uploadé
-      if (result?.url) setUploadedMeetingId("demo-meeting-id");
+      const meetingId = result?.name || "meeting-session-1";
+      setUploadedMeetingId(meetingId);
+      
+      // Déclenchement automatique du pipeline de transcription & analyse NLP
+      try {
+        await meetingService.startTranscription(meetingId);
+      } catch (e) {
+        logger.warn("[Upload] Démarrage transcription automatique:", e.message);
+      }
     } catch { /* error déjà géré dans le hook */ }
   }, [upload]);
 
